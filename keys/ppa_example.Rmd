@@ -44,7 +44,7 @@ Get the sage grouse data (note: we'll treat each *observation* as a separate "ev
 ```{r}
 grouse <- read_sf(here("data","sg_data","ds68.shp")) %>% 
   dplyr::select(DATE_) %>% 
-  st_transform(crs = 6345)
+  st_transform(crs = 4326)
 
 # Note: this transform to 6345 *works*, but shouldn't be necessary and messes up the G & L functions...
 
@@ -56,7 +56,7 @@ Get the Mono County shapefile:
 
 ```{r}
 county <- read_sf(dsn = here("data","sg_data","County_Boundaries.shp")) %>% dplyr::select(CountyName) %>% 
-  st_transform(crs = 6345)
+  st_transform(crs = 4326)
 
 plot(county)
 ```
@@ -102,6 +102,10 @@ grouse_qt <- quadrat.test(grouse_full, nx = 5, ny = 10)
 # Look at it: 
 plot(grouse_full)
 plot(grouse_qt, add = TRUE, cex = 0.4)
+
+# top left number = number of actual observations
+# top right number = number of expected observations if truely random spatial distribution
+# bottom number = error term (?)
 ```
 
 What's shown on that map? See `?quadrat.test`:
@@ -114,21 +118,25 @@ is computed."
 
 ### Density
 ```{r}
-grouse_density <- density(grouse_full, sigma = 5000)
+
+# scary thing about denstiy is that its totally dependent on the bandwidth you choose (sigma), 
+grouse_density <- density(grouse_full, sigma = 0.05)
 plot(grouse_density)
+
+# if you have no idea what to set bandwidth at, look at data and try some stuff out to see how closely you can get to match based on original data, or use existing literature values, 
 
 ```
 
 ### Nearest neighbor analysis (G-Function):
 ```{r}
-# r <- seq(0,0.000001, by = 0.0000005)
+r <- seq(0,0.02, by = 0.001)
 
-# gfunction <- envelope(grouse_full, fun = Gest, r = r, nsim = 100, nrank = 2) # Sig level of Monte Carlo = 0.04
+gfunction <- envelope(grouse_full, fun = Gest, r = r, nsim = 100, nrank = 2) # Sig level of Monte Carlo = 0.04
 
-# plot(gfunction$obs ~ gfunction$r, type = "l", col = "black", lty = 11)
-# lines(gfunction$hi ~ gfunction$r, type = "l", col = "blue", lty = 8)
-# lines(gfunction$theo ~ gfunction$r, type = "l", col = "red", lty = 6)
-# lines(gfunction$lo ~ gfunction$r, type = "l", col = "green", lty = 4)
+plot(gfunction$obs ~ gfunction$r, type = "l", col = "black", lty = 11)
+lines(gfunction$hi ~ gfunction$r, type = "l", col = "blue", lty = 8)
+lines(gfunction$theo ~ gfunction$r, type = "l", col = "red", lty = 6)
+lines(gfunction$lo ~ gfunction$r, type = "l", col = "green", lty = 4)
 
 # Confirms, in combination with WHAT WE SEE (most importantly), + quadrat.test & density = clustered data!
 ```
